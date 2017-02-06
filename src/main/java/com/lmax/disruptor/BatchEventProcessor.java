@@ -109,31 +109,35 @@ public final class BatchEventProcessor<T>
         {
             throw new IllegalStateException("Thread is already running");
         }
+        //TODO	清除警告标志
         sequenceBarrier.clearAlert();
-
+        //执行启动通知方法（handler实现了lifecycleaware接口）
         notifyStart();
 
         T event = null;
+        //获取下一个序号
         long nextSequence = sequence.get() + 1L;
         try
-        {
+        {	//进入死循环执行
             while (true)
             {
                 try
-                {
+                {//按照配置的等待策略，等待并获取当前最大可用序号
                     final long availableSequence = sequenceBarrier.waitFor(nextSequence);
-
+                    //如果目标序号小于等于当前最大可用序号、
                     while (nextSequence <= availableSequence)
-                    {
+                    {	//按下一个序号获取下一个事件
                         event = dataProvider.get(nextSequence);
+                        //执行处理方法
                         eventHandler.onEvent(event, nextSequence, nextSequence == availableSequence);
+                        //下一个序号增加
                         nextSequence++;
                     }
-
+                    //将所有当前可消费序号消费完后，更新自己的序号为最后一个消费完成的序号
                     sequence.set(availableSequence);
                 }
                 catch (final TimeoutException e)
-                {
+                {//如果捕获到过期异常，实用配置的过期handler执行异常处理
                     notifyTimeout(sequence.get());
                 }
                 catch (final AlertException ex)
@@ -145,14 +149,17 @@ public final class BatchEventProcessor<T>
                 }
                 catch (final Throwable ex)
                 {
+                	//如果捕获到其他异常，使用配置的exceptionhandler执行异常处理
                     exceptionHandler.handleEventException(ex, nextSequence, event);
+                    //更新自己的序号为最后一个消费完成的序号
                     sequence.set(nextSequence);
+                    //下一个序号增加
                     nextSequence++;
                 }
             }
         }
         finally
-        {
+        {//执行结束通知方法（handler实现了lifecycleaware接口）
             notifyShutdown();
             running.set(false);
         }
@@ -177,7 +184,7 @@ public final class BatchEventProcessor<T>
      * Notifies the EventHandler when this processor is starting up
      */
     private void notifyStart()
-    {
+    {//如果handler是能觉察生命周期的handler，既实现了LifecycleAware接口，则调用其onstart方法
         if (eventHandler instanceof LifecycleAware)
         {
             try

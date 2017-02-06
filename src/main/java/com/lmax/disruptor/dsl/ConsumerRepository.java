@@ -91,10 +91,16 @@ class ConsumerRepository<T> implements Iterable<ConsumerInfo>
         return getEventProcessorFor(handler).getSequence();
     }
 
+    /**
+     * 将指定屏障sequence对应的consumer设置为非责任链结尾消费者
+     * @param barrierEventProcessors
+     */
     public void unMarkEventProcessorsAsEndOfChain(final Sequence... barrierEventProcessors)
     {
+    	//循环屏障sequence
         for (Sequence barrierEventProcessor : barrierEventProcessors)
         {
+        	//从Map《sequence,consumerinfo》中获得consumerinfo，并标记为非责任链结尾消费者
             getEventProcessorInfo(barrierEventProcessor).markAsUsedInBarrier();
         }
     }

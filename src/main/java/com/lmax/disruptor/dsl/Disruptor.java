@@ -228,7 +228,7 @@ public class Disruptor<T>
     @SuppressWarnings("varargs")
     public EventHandlerGroup<T> handleEventsWithWorkerPool(final WorkHandler<T>... workHandlers)
     {
-        return createWorkerPool(new Sequence[0], workHandlers);
+        return createWorkerPool(new Sequence[0], workHandlers);//创建工人池
     }
 
     /**
@@ -359,6 +359,7 @@ public class Disruptor<T>
     public RingBuffer<T> start()
     {
         checkOnlyStartedOnce();
+        //遍历所有消费者，使用线程工厂创建线程执行
         for (final ConsumerInfo consumerInfo : consumerRepository)
         {
             consumerInfo.start(executor);
@@ -509,29 +510,29 @@ public class Disruptor<T>
         final Sequence[] barrierSequences,
         final EventHandler<? super T>[] eventHandlers)
     {
-        checkNotStarted();
+        checkNotStarted();//检查disruptor是否已经启动，添加handlers必须在启动之前。
 
-        final Sequence[] processorSequences = new Sequence[eventHandlers.length];
-        final SequenceBarrier barrier = ringBuffer.newBarrier(barrierSequences);
+        final Sequence[] processorSequences = new Sequence[eventHandlers.length];//按照handlers长度创建sequence
+        final SequenceBarrier barrier = ringBuffer.newBarrier(barrierSequences);//创建sequence屏障
 
         for (int i = 0, eventHandlersLength = eventHandlers.length; i < eventHandlersLength; i++)
         {
             final EventHandler<? super T> eventHandler = eventHandlers[i];
 
             final BatchEventProcessor<T> batchEventProcessor =
-                new BatchEventProcessor<T>(ringBuffer, barrier, eventHandler);
-
+                new BatchEventProcessor<T>(ringBuffer, barrier, eventHandler);//创建eventprocessor
+            
             if (exceptionHandler != null)
             {
                 batchEventProcessor.setExceptionHandler(exceptionHandler);
             }
 
-            consumerRepository.add(batchEventProcessor, eventHandler, barrier);
-            processorSequences[i] = batchEventProcessor.getSequence();
+            consumerRepository.add(batchEventProcessor, eventHandler, barrier);//向消费者仓库添加一组eventprocessor、eventhandler、barrier
+            processorSequences[i] = batchEventProcessor.getSequence();//获取EventProcessor中初始化好的sequence
         }
-
+        //将新加消费者的sequence加入到sequencer中，如果节点为
         updateGatingSequencesForNextInChain(barrierSequences, processorSequences);
-
+        //返回EventHandlerGroup，包含handler仓库，消费者sequence集合
         return new EventHandlerGroup<T>(this, consumerRepository, processorSequences);
     }
 
@@ -539,11 +540,13 @@ public class Disruptor<T>
     {
         if (processorSequences.length > 0)
         {
-            ringBuffer.addGatingSequences(processorSequences);
+            ringBuffer.addGatingSequences(processorSequences);//将各消费者的sequence加入到sequencer中，并使用当前最大可用位置初始化好
+            //循环删除屏障barrier的sequence
             for (final Sequence barrierSequence : barrierSequences)
             {
                 ringBuffer.removeGatingSequence(barrierSequence);
             }
+            //将指定屏障sequence对应的consumer设置为非责任链结尾消费者
             consumerRepository.unMarkEventProcessorsAsEndOfChain(barrierSequences);
         }
     }
@@ -563,13 +566,13 @@ public class Disruptor<T>
     EventHandlerGroup<T> createWorkerPool(
         final Sequence[] barrierSequences, final WorkHandler<? super T>[] workHandlers)
     {
-        final SequenceBarrier sequenceBarrier = ringBuffer.newBarrier(barrierSequences);
-        final WorkerPool<T> workerPool = new WorkerPool<T>(ringBuffer, sequenceBarrier, exceptionHandler, workHandlers);
+        final SequenceBarrier sequenceBarrier = ringBuffer.newBarrier(barrierSequences);//创建消费序号栅栏
+        final WorkerPool<T> workerPool = new WorkerPool<T>(ringBuffer, sequenceBarrier, exceptionHandler, workHandlers);//创建工人池
 
 
-        consumerRepository.add(workerPool, sequenceBarrier);
+        consumerRepository.add(workerPool, sequenceBarrier);//向消费者仓库添加workerPool和sequenceBarrier
 
-        Sequence[] workerSequences = workerPool.getWorkerSequences();
+        Sequence[] workerSequences = workerPool.getWorkerSequences();//获取worker的sequence数组
 
         updateGatingSequencesForNextInChain(barrierSequences, workerSequences);
 

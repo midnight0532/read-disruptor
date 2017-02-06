@@ -112,29 +112,32 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
         {
             throw new IllegalArgumentException("n must be > 0");
         }
-
+        //获取当前最大可消费序号，即最后生产序号
         long nextValue = this.nextValue;
-
+        //获取当前可用序号加n（目标下标数量）后的目标序号
         long nextSequence = nextValue + n;
+        //用目标序号减ringbuffer的大小，即一圈后的序号
         long wrapPoint = nextSequence - bufferSize;
+        //消费最慢的消费者消费完的最后一个序号
         long cachedGatingSequence = this.cachedValue;
-
+        //如果目标序号会覆盖尚未消费的序号，或者还有需要消费但尚未写入内容的序号
         if (wrapPoint > cachedGatingSequence || cachedGatingSequence > nextValue)
-        {
+        {	//设置ringbuffer指针指向最后生产序号
             cursor.setVolatile(nextValue);  // StoreLoad fence
 
             long minSequence;
+            //如果用目标序号减ringbuffer的大小获得的序号仍然大于最小的尚未消费的序号，进入死循环
             while (wrapPoint > (minSequence = Util.getMinimumSequence(gatingSequences, nextValue)))
             {
-                waitStrategy.signalAllWhenBlocking();
+                waitStrategy.signalAllWhenBlocking();//通知阻塞的消费者消费
                 LockSupport.parkNanos(1L); // TODO: Use waitStrategy to spin?
             }
 
             this.cachedValue = minSequence;
         }
-
+        //将最后生产序号设置为目标序号
         this.nextValue = nextSequence;
-
+        //返回目标序号
         return nextSequence;
     }
 

@@ -34,8 +34,9 @@ public final class BlockingWaitStrategy implements WaitStrategy
         throws AlertException, InterruptedException
     {
         long availableSequence;
+        //如果ringbuffer的当前最大序号小于目标序号
         if (cursorSequence.get() < sequence)
-        {
+        {//阻塞，直到ringbuffer的当前最大序号大于等于目标序号
             lock.lock();
             try
             {
@@ -55,7 +56,7 @@ public final class BlockingWaitStrategy implements WaitStrategy
         {
             barrier.checkAlert();
         }
-
+        //返回可用的序号
         return availableSequence;
     }
 

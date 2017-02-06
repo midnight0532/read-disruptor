@@ -28,21 +28,21 @@ abstract class RingBufferPad
 
 abstract class RingBufferFields<E> extends RingBufferPad
 {
-    private static final int BUFFER_PAD;
-    private static final long REF_ARRAY_BASE;
-    private static final int REF_ELEMENT_SHIFT;
+    private static final int BUFFER_PAD;//数组填充量
+    private static final long REF_ARRAY_BASE;//
+    private static final int REF_ELEMENT_SHIFT;//引用长度2的幂
     private static final Unsafe UNSAFE = Util.getUnsafe();
 
     static
     {
-        final int scale = UNSAFE.arrayIndexScale(Object[].class);
+        final int scale = UNSAFE.arrayIndexScale(Object[].class);//获取对象数组元素引用的长度
         if (4 == scale)
         {
-            REF_ELEMENT_SHIFT = 2;
+            REF_ELEMENT_SHIFT = 2;//引用长度2的幂
         }
         else if (8 == scale)
         {
-            REF_ELEMENT_SHIFT = 3;
+            REF_ELEMENT_SHIFT = 3;//引用长度2的幂
         }
         else
         {
@@ -53,6 +53,9 @@ abstract class RingBufferFields<E> extends RingBufferPad
         REF_ARRAY_BASE = UNSAFE.arrayBaseOffset(Object[].class) + (BUFFER_PAD << REF_ELEMENT_SHIFT);
     }
 
+    /**
+     * 允许写入的最大下标，初始值是最大元素编号
+     */
     private final long indexMask;
     private final Object[] entries;
     protected final int bufferSize;
@@ -74,9 +77,10 @@ abstract class RingBufferFields<E> extends RingBufferPad
             throw new IllegalArgumentException("bufferSize must be a power of 2");
         }
 
-        this.indexMask = bufferSize - 1;
-        this.entries = new Object[sequencer.getBufferSize() + 2 * BUFFER_PAD];
-        fill(eventFactory);
+        this.indexMask = bufferSize - 1;//获取最大可写下标
+        //TODO	看不懂
+        this.entries = new Object[sequencer.getBufferSize() + 2 * BUFFER_PAD];//创建元素数组，对数组大小做出了某些调整，加上了两倍的填充量
+        fill(eventFactory);//使用eventFactory创建对象填充元素数组，忽略数组开头、结尾1倍填充量的位置，从中间开始加
     }
 
     private void fill(EventFactory<E> eventFactory)
@@ -133,7 +137,7 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
         int bufferSize,
         WaitStrategy waitStrategy)
     {
-        MultiProducerSequencer sequencer = new MultiProducerSequencer(bufferSize, waitStrategy);
+        MultiProducerSequencer sequencer = new MultiProducerSequencer(bufferSize, waitStrategy);//创建Sequencer，里面包含ringbuffer的各槽状态数组
 
         return new RingBuffer<E>(factory, sequencer);
     }

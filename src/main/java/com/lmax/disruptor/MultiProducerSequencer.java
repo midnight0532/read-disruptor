@@ -33,15 +33,30 @@ import com.lmax.disruptor.util.Util;
 public final class MultiProducerSequencer extends AbstractSequencer
 {
     private static final Unsafe UNSAFE = Util.getUnsafe();
+    /**
+     * 数组头长度
+     */
     private static final long BASE = UNSAFE.arrayBaseOffset(int[].class);
+    /**
+     * 数组元素长度
+     */
     private static final long SCALE = UNSAFE.arrayIndexScale(int[].class);
 
     private final Sequence gatingSequenceCache = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
 
     // availableBuffer tracks the state of each ringbuffer slot
     // see below for more details on the approach
+    /**
+     * 记录每个槽状态的int数组
+     */
     private final int[] availableBuffer;
+    /**
+     * 允许写入的最大下标，初始值是最大元素编号
+     */
     private final int indexMask;
+    /**
+     * 对buffersize求2的幂
+     */
     private final int indexShift;
 
     /**
@@ -54,9 +69,9 @@ public final class MultiProducerSequencer extends AbstractSequencer
     {
         super(bufferSize, waitStrategy);
         availableBuffer = new int[bufferSize];
-        indexMask = bufferSize - 1;
-        indexShift = Util.log2(bufferSize);
-        initialiseAvailableBuffer();
+        indexMask = bufferSize - 1;//允许写入的最大下标，初始值是最大元素编号
+        indexShift = Util.log2(bufferSize);//求2的幂
+        initialiseAvailableBuffer();//初始化ringbuffer的各状态槽
     }
 
     /**
@@ -116,37 +131,37 @@ public final class MultiProducerSequencer extends AbstractSequencer
             throw new IllegalArgumentException("n must be > 0");
         }
 
-        long current;
-        long next;
-
+        long current;//当前序号
+        long next;//下一序号
+        //执行循环
         do
         {
-            current = cursor.get();
-            next = current + n;
+        	current = cursor.get();//获取当前序号，即最大生产完成序号
+            next = current + n;//获取目标序号
 
-            long wrapPoint = next - bufferSize;
-            long cachedGatingSequence = gatingSequenceCache.get();
-
+            long wrapPoint = next - bufferSize;//获取目标序号减一圈的序号
+            long cachedGatingSequence = gatingSequenceCache.get();//获取所有消费者都消费完成的最大序号
+            //如果目标序号减一圈后仍大于最大消费完成序号（目标序号会套圈覆盖未消费的序号）或	最大消费完成序号大于当前序号？？
             if (wrapPoint > cachedGatingSequence || cachedGatingSequence > current)
             {
-                long gatingSequence = Util.getMinimumSequence(gatingSequences, current);
-
+                long gatingSequence = Util.getMinimumSequence(gatingSequences, current);//获取所有消费者中最小的消费完成序号
+                //如果目标序号仍旧套圈消费者最小消费完成序号
                 if (wrapPoint > gatingSequence)
                 {
-                    waitStrategy.signalAllWhenBlocking();
+                    waitStrategy.signalAllWhenBlocking();////通知阻塞的消费者消费
                     LockSupport.parkNanos(1); // TODO, should we spin based on the wait strategy?
                     continue;
                 }
-
+                //设置当前所有消费者都消费完成的最大序号
                 gatingSequenceCache.set(gatingSequence);
             }
-            else if (cursor.compareAndSet(current, next))
+            else if (cursor.compareAndSet(current, next))//比较并设置ringbuffer的当前值，如果设置成功，即排除了其他生产者线程的干扰，跳出循环
             {
                 break;
             }
         }
         while (true);
-
+        //返回可用的序号
         return next;
     }
 
@@ -199,6 +214,9 @@ public final class MultiProducerSequencer extends AbstractSequencer
         return getBufferSize() - (produced - consumed);
     }
 
+    /**
+     * 初始化ringbuffer所有槽的状态为-1
+     */
     private void initialiseAvailableBuffer()
     {
         for (int i = availableBuffer.length - 1; i != 0; i--)
@@ -258,8 +276,8 @@ public final class MultiProducerSequencer extends AbstractSequencer
 
     private void setAvailableBufferValue(int index, int flag)
     {
-        long bufferAddress = (index * SCALE) + BASE;
-        UNSAFE.putOrderedInt(availableBuffer, bufferAddress, flag);
+        long bufferAddress = (index * SCALE) + BASE;//计算指定下标槽状态的偏移量
+        UNSAFE.putOrderedInt(availableBuffer, bufferAddress, flag);//设置指定内存区域的值，即将状态写入对应下标的状态槽
     }
 
     /**
