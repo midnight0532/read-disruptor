@@ -111,13 +111,13 @@ public final class WorkProcessor<T>
         }
         sequenceBarrier.clearAlert();
 
-        notifyStart();
+        notifyStart();//调用消费者启动通知方法（需实现LifecycleAware）
 
-        boolean processedSequence = true;
-        long cachedAvailableSequence = Long.MIN_VALUE;
-        long nextSequence = sequence.get();
+        boolean processedSequence = true;//消费到了元素没有
+        long cachedAvailableSequence = Long.MIN_VALUE;//初始化已经访问过的序号
+        long nextSequence = sequence.get();//初始化下一个序号
         T event = null;
-        while (true)
+        while (true)//进入死循环
         {
             try
             {
@@ -129,22 +129,22 @@ public final class WorkProcessor<T>
                 if (processedSequence)
                 {
                     processedSequence = false;
-                    do
+                    do//循环对下一序号加1，直到整个work的消费序号与下一个序号减1相同（即循环增加本worker的序号直到下一个未消费的序号，避免重复消费）
                     {
-                        nextSequence = workSequence.get() + 1L;
-                        sequence.set(nextSequence - 1L);
+                        nextSequence = workSequence.get() + 1L;//获取下一个序号
+                        sequence.set(nextSequence - 1L);//设置自身访问完毕的序号
                     }
                     while (!workSequence.compareAndSet(nextSequence - 1L, nextSequence));
                 }
-
+                //如果可用的序号大于等于下一个序号，即有可消费元素
                 if (cachedAvailableSequence >= nextSequence)
                 {
                     event = ringBuffer.get(nextSequence);
                     workHandler.onEvent(event);
-                    processedSequence = true;
+                    processedSequence = true;//设置消费到了元素，以便下次再消费
                 }
                 else
-                {
+                {//如果没有可消费元素，就等待生产者生产
                     cachedAvailableSequence = sequenceBarrier.waitFor(nextSequence);
                 }
             }

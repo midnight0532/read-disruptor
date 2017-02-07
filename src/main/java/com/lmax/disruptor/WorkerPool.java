@@ -129,9 +129,9 @@ public final class WorkerPool<T>
             throw new IllegalStateException("WorkerPool has already been started and cannot be restarted until halted.");
         }
 
-        final long cursor = ringBuffer.getCursor();
-        workSequence.set(cursor);
-
+        final long cursor = ringBuffer.getCursor();//获取ringbuffer的指针
+        workSequence.set(cursor);//将ringbuffer的指针赋值给workerpool的指针
+        //循环workprocessor，并执行
         for (WorkProcessor<?> processor : workProcessors)
         {
             processor.getSequence().set(cursor);
