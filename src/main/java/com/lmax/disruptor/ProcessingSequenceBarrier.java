@@ -37,7 +37,7 @@ final class ProcessingSequenceBarrier implements SequenceBarrier
         this.sequencer = sequencer;
         this.waitStrategy = waitStrategy;
         this.cursorSequence = cursorSequence;
-        if (0 == dependentSequences.length)
+        if (0 == dependentSequences.length)//如果依赖sequences的长度为0，则表示是第一级消费者，设置其依赖sequence为ringbuffer的sequence
         {
             dependentSequence = cursorSequence;
         }
@@ -52,14 +52,14 @@ final class ProcessingSequenceBarrier implements SequenceBarrier
         throws AlertException, InterruptedException, TimeoutException
     {
         checkAlert();
-
+        //传入目标序号（当前消费者需要消费的下一个序号），按照配置的等待策略，等待并获取当前最大可用序号
         long availableSequence = waitStrategy.waitFor(sequence, cursorSequence, dependentSequence, this);
-
+        //如果最大可用序号小于目标序号，返回最大可用序号（部分waitstrategy支持）
         if (availableSequence < sequence)
-        {
+        {	
             return availableSequence;
         }
-
+        //如果最大可用序号大于等于当前消费者需要消费的下一序号
         return sequencer.getHighestPublishedSequence(sequence, availableSequence);
     }
 

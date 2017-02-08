@@ -122,7 +122,7 @@ public final class BatchEventProcessor<T>
             while (true)
             {
                 try
-                {//按照配置的等待策略，等待并获取当前最大可用序号
+                {//传入目标序号（当前消费者需要消费的下一个序号），按照配置的等待策略，等待并获取当前最大可用序号
                     final long availableSequence = sequenceBarrier.waitFor(nextSequence);
                     //如果目标序号小于等于当前最大可用序号、
                     while (nextSequence <= availableSequence)
