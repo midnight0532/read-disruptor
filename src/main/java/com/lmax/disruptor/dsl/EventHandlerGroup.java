@@ -143,7 +143,7 @@ public class EventHandlerGroup<T>
      * @return a {@link EventHandlerGroup} that can be used to set up a event processor barrier over the created event processors.
      */
     public EventHandlerGroup<T> handleEventsWith(final EventHandler<? super T>... handlers)
-    {
+    {	//创建下游eventprocessor，并用本级别eventprocessor的sequence数组生成下游eventprocessor的消费序号屏障
         return disruptor.createEventProcessors(sequences, handlers);
     }
 

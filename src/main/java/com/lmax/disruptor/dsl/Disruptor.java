@@ -542,7 +542,7 @@ public class Disruptor<T>
         if (processorSequences.length > 0)
         {
             ringBuffer.addGatingSequences(processorSequences);//将各消费者的sequence加入到sequencer中，并使用当前最大可用位置初始化好
-            //循环删除屏障barrier的sequence
+            //TODO	循环删除屏障barrier的sequence？？
             for (final Sequence barrierSequence : barrierSequences)
             {
                 ringBuffer.removeGatingSequence(barrierSequence);
