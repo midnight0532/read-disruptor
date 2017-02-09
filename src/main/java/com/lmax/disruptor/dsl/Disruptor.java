@@ -513,7 +513,8 @@ public class Disruptor<T>
         checkNotStarted();//检查disruptor是否已经启动，添加handlers必须在启动之前。
 
         final Sequence[] processorSequences = new Sequence[eventHandlers.length];//按照handlers长度创建sequence
-        final SequenceBarrier barrier = ringBuffer.newBarrier(barrierSequences);//创建sequence屏障
+        //创建sequence屏障(如果是第一级，传入的是空数组，如果是第二级，则把上一级消费者的sequencer数组传进来当做屏障)
+        final SequenceBarrier barrier = ringBuffer.newBarrier(barrierSequences);
 
         for (int i = 0, eventHandlersLength = eventHandlers.length; i < eventHandlersLength; i++)
         {

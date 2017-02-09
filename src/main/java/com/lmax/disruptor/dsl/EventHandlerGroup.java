@@ -51,7 +51,7 @@ public class EventHandlerGroup<T>
      * @return a new EventHandlerGroup combining the existing and new consumers into a single dependency group.
      */
     public EventHandlerGroup<T> and(final EventHandlerGroup<T> otherHandlerGroup)
-    {
+    {	//合并原sequencer数组和传入的handlergroup中的sequencer数组
         final Sequence[] combinedSequences = new Sequence[this.sequences.length + otherHandlerGroup.sequences.length];
         System.arraycopy(this.sequences, 0, combinedSequences, 0, this.sequences.length);
         System.arraycopy(
