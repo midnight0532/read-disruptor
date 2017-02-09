@@ -34,14 +34,15 @@ public final class BlockingWaitStrategy implements WaitStrategy
         throws AlertException, InterruptedException
     {
         long availableSequence;
+        //先过滤ringbuffer的序号是否符合消费要求。
         //如果ringbuffer的当前最大序号小于目标序号
         if (cursorSequence.get() < sequence)
-        {//阻塞，直到ringbuffer的当前最大序号大于等于目标序号
+        {
             lock.lock();
             try
             {
                 while (cursorSequence.get() < sequence)
-                {
+                {//阻塞，直到ringbuffer的当前最大序号大于等于目标序号
                     barrier.checkAlert();
                     processorNotifyCondition.await();
                 }
@@ -51,12 +52,13 @@ public final class BlockingWaitStrategy implements WaitStrategy
                 lock.unlock();
             }
         }
-
+        //再过滤依赖序号是否符合消费要求
+        //死循环将依赖序号赋值给可用序号，直到依赖序号大于等于目标序号跳出循环
         while ((availableSequence = dependentSequence.get()) < sequence)
         {
             barrier.checkAlert();
         }
-        //返回可用的序号
+        //ringbuffer中有尚未消费的序号，并且依赖序号大于等于目标序号时（即上游消费者的序号比自己大），返回可用的序号
         return availableSequence;
     }
 
