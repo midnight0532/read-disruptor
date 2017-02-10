@@ -53,8 +53,8 @@ public final class WorkerPool<T>
     {
         this.ringBuffer = ringBuffer;
         final int numWorkers = workHandlers.length;
-        workProcessors = new WorkProcessor[numWorkers];
-
+        workProcessors = new WorkProcessor[numWorkers];//创建worker的sequence数组
+        //循环每个worker，生成sequence并加入到worker的sequence数组中
         for (int i = 0; i < numWorkers; i++)
         {
             workProcessors[i] = new WorkProcessor<T>(

@@ -287,12 +287,12 @@ public class Disruptor<T>
     @SuppressWarnings("varargs")
     public EventHandlerGroup<T> after(final EventHandler<T>... handlers)
     {
-        final Sequence[] sequences = new Sequence[handlers.length];
+        final Sequence[] sequences = new Sequence[handlers.length];//按上游handlers数量声明sequence数组
         for (int i = 0, handlersLength = handlers.length; i < handlersLength; i++)
-        {
+        {	//循环上游handler获取上游sequence并赋值给sequence数组
             sequences[i] = consumerRepository.getSequenceFor(handlers[i]);
         }
-
+        //创建handler群体并返回。返回后可对群体添加下游消费者，以上游消费者的sequence作为下游消费者的sequencebarrier
         return new EventHandlerGroup<T>(this, consumerRepository, sequences);
     }
 
@@ -531,7 +531,7 @@ public class Disruptor<T>
             consumerRepository.add(batchEventProcessor, eventHandler, barrier);//向消费者仓库添加一组eventprocessor、eventhandler、barrier
             processorSequences[i] = batchEventProcessor.getSequence();//获取EventProcessor中初始化好的sequence
         }
-        //将新加消费者的sequence加入到sequencer中，如果节点为
+        //将新加消费者的sequence加入到sequencer中，如果节点为下游消费者，则将上游消费者标记为非责任链结尾消费者
         updateGatingSequencesForNextInChain(barrierSequences, processorSequences);
         //返回EventHandlerGroup，包含handler仓库，消费者sequence集合
         return new EventHandlerGroup<T>(this, consumerRepository, processorSequences);
@@ -541,13 +541,13 @@ public class Disruptor<T>
     {
         if (processorSequences.length > 0)
         {
-            ringBuffer.addGatingSequences(processorSequences);//将各消费者的sequence加入到sequencer中，并使用当前最大可用位置初始化好
-            //TODO	循环删除屏障barrier的sequence？？
+            ringBuffer.addGatingSequences(processorSequences);//将各新增消费者的sequence加入到sequencer中，并使用当前最大可用位置初始化好
+            //循环删除屏障ringbuffer中当前handler的barriersequence对应的sequence，因为添加了下游sequence后，下游sequence必小于上游sequence，上游sequence监控就显得多余了
             for (final Sequence barrierSequence : barrierSequences)
             {
                 ringBuffer.removeGatingSequence(barrierSequence);
             }
-            //将指定屏障sequence对应的consumer设置为非责任链结尾消费者
+            //将指定屏障sequence对应的consumer设置为非责任链结尾消费者,因为barrierSequences长度不为0，表明此handler有下游handler
             consumerRepository.unMarkEventProcessorsAsEndOfChain(barrierSequences);
         }
     }

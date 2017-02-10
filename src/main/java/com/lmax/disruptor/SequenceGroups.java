@@ -78,7 +78,7 @@ class SequenceGroups
             
             final int oldSize = oldSequences.length;//获得ringbuffer中sequence数组的长度
             newSequences = new Sequence[oldSize - numToRemove];//用原长度减要删除的sequence长度定义新sequence数组
-
+            //循环将不需删除的sequence添加到新数组中
             for (int i = 0, pos = 0; i < oldSize; i++)
             {
                 final Sequence testSequence = oldSequences[i];
@@ -88,7 +88,7 @@ class SequenceGroups
                 }
             }
         }
-        while (!sequenceUpdater.compareAndSet(holder, oldSequences, newSequences));
+        while (!sequenceUpdater.compareAndSet(holder, oldSequences, newSequences));//当比较获取到的原sequence数组与sequencer中当前sequence数组相同时，设置新sequence数组并跳出循环（排除其他线程添加handler的干扰）
 
         return numToRemove != 0;
     }
