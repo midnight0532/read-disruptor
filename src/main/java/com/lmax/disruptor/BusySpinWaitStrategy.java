@@ -17,6 +17,7 @@ package com.lmax.disruptor;
 
 
 /**
+ * 非阻塞，效率高，要求高
  * Busy Spin strategy that uses a busy spin loop for {@link com.lmax.disruptor.EventProcessor}s waiting on a barrier.
  * <p>
  * This strategy will use CPU resource to avoid syscalls which can introduce latency jitter.  It is best

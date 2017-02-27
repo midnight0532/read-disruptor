@@ -42,8 +42,9 @@ public final class BlockingWaitStrategy implements WaitStrategy
             try
             {
                 while (cursorSequence.get() < sequence)
-                {//阻塞，直到ringbuffer的当前最大序号大于等于目标序号
-                    barrier.checkAlert();
+                {	//检查disruptor关闭标识
+                    barrier.checkAlert();//
+                    //阻塞，直到ringbuffer的当前最大序号大于等于目标序号，释放锁
                     processorNotifyCondition.await();
                 }
             }

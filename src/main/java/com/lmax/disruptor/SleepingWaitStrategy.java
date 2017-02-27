@@ -28,9 +28,9 @@ import java.util.concurrent.locks.LockSupport;
  */
 public final class SleepingWaitStrategy implements WaitStrategy
 {
-    private static final int DEFAULT_RETRIES = 200;
+    private static final int DEFAULT_RETRIES = 200;//默认重试次数
 
-    private final int retries;
+    private final int retries;//重试次数
 
     public SleepingWaitStrategy()
     {
@@ -48,8 +48,8 @@ public final class SleepingWaitStrategy implements WaitStrategy
         throws AlertException, InterruptedException
     {
         long availableSequence;
-        int counter = retries;
-
+        int counter = retries;//设置重试计数器
+        //如果依赖序号小于目标序号，执行循环
         while ((availableSequence = dependentSequence.get()) < sequence)
         {
             counter = applyWaitMethod(barrier, counter);
@@ -65,17 +65,17 @@ public final class SleepingWaitStrategy implements WaitStrategy
 
     private int applyWaitMethod(final SequenceBarrier barrier, int counter)
         throws AlertException
-    {
+    {	//检查diaruptor关闭状态
         barrier.checkAlert();
-
+        //如果counter大于100
         if (counter > 100)
-        {
+        {	//count减1
             --counter;
         }
-        else if (counter > 0)
-        {
+        else if (counter > 0)//如果counter大于0小100
+        {	//count减1
             --counter;
-            Thread.yield();
+            Thread.yield();//线程让步，有可能让步cpu资源，让其他线程先执行
         }
         else
         {
